@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundlab.com.br/schemas/veritas/evidence-event.v1.schema.json",
+  "title": "Veritas Evidence Event v1",
+  "description": "Append-only ledger event containing non-reversible evidence for a sensitive operation. This schema explicitly forbids raw sensitive payload fields.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision_id",
+    "tenant_id",
+    "environment",
+    "route",
+    "model_provider",
+    "model_id",
+    "policy_snapshot_hash",
+    "input_hash_sha256",
+    "output_hash_sha256",
+    "final_hash",
+    "signature_algorithm",
+    "kms_key_version",
+    "signature_base64",
+    "sequence_index",
+    "previous_hash",
+    "current_hash",
+    "ledger_status",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "veritas.evidence_event.v1"
+    },
+    "decision_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9._:-]+$"
+    },
+    "client_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9._:-]+$"
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["dev", "staging", "prod", "audit-sandbox"]
+    },
+    "route": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^/[-a-zA-Z0-9_./:]+$"
+    },
+    "operation_type": {
+      "type": "string",
+      "enum": ["ai_inference", "document_processing", "policy_decision", "receipt_verification", "appeal", "notarization", "custom"]
+    },
+    "model_provider": {
+      "type": "string",
+      "enum": ["google_vertex_ai", "google_gemini", "openai", "anthropic", "aws_bedrock", "azure_openai", "custom", "none"]
+    },
+    "model_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "model_version": {
+      "type": ["string", "null"],
+      "maxLength": 256
+    },
+    "policy_snapshot_hash": {
+      "$ref": "#/$defs/sha256_prefixed"
+    },
+    "input_hash_sha256": {
+      "$ref": "#/$defs/sha256_prefixed"
+    },
+    "output_hash_sha256": {
+      "$ref": "#/$defs/sha256_prefixed"
+    },
+    "final_hash": {
+      "$ref": "#/$defs/sha256_prefixed"
+    },
+    "canonicalization_algorithm": {
+      "type": "string",
+      "enum": ["RFC8785_JSON_CANONICALIZATION", "JCS", "CUSTOM"]
+    },
+    "canonicalization_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "signature_algorithm": {
+      "type": "string",
+      "enum": ["ECDSA_P256_SHA256", "ECDSA_P384_SHA384", "RSA_PSS_2048_SHA256", "ED25519"]
+    },
+    "kms_key_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "public_key_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "signature_base64": {
+      "type": "string",
+      "contentEncoding": "base64",
+      "minLength": 16,
+      "maxLength": 4096
+    },
+    "sequence_index": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "previous_hash": {
+      "anyOf": [
+        { "$ref": "#/$defs/sha256_prefixed" },
+        { "type": "null" }
+      ]
+    },
+    "current_hash": {
+      "$ref": "#/$defs/sha256_prefixed"
+    },
+    "latency_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "policy_decision": {
+      "type": "string",
+      "enum": ["ALLOW", "DENY", "REVIEW", "FAIL_CLOSED", "NOT_APPLICABLE"]
+    },
+    "ledger_status": {
+      "type": "string",
+      "enum": ["sealed", "degraded", "pending_reconciliation", "failed_closed"]
+    },
+    "outbox_status": {
+      "type": "string",
+      "enum": ["not_required", "queued", "flushed", "failed", "unknown"]
+    },
+    "failure_code": {
+      "type": ["string", "null"],
+      "enum": [
+        null,
+        "POLICY_UNAVAILABLE",
+        "POLICY_SNAPSHOT_MISSING",
+        "KMS_SIGNING_FAILED",
+        "CHAINHEAD_ADVANCE_FAILED",
+        "LEDGER_APPEND_DEGRADED",
+        "ZERO_PERSISTENCE_VIOLATION",
+        "MODEL_PROVIDER_UNAVAILABLE",
+        "PAYLOAD_CONTRACT_VIOLATION",
+        "AUTHORIZATION_DENIED",
+        "REPLAY_DETECTED"
+      ]
+    },
+    "region": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "runtime_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "service": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "image_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-fA-F0-9]{64}$"
+        },
+        "commit_sha": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{7,40}$"
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "not": {
+    "anyOf": [
+      { "required": ["raw_prompt"] },
+      { "required": ["prompt"] },
+      { "required": ["raw_response"] },
+      { "required": ["response"] },
+      { "required": ["document_text"] },
+      { "required": ["document_content"] },
+      { "required": ["payload"] },
+      { "required": ["body"] },
+      { "required": ["cpf"] },
+      { "required": ["ssn"] },
+      { "required": ["password"] },
+      { "required": ["access_token"] },
+      { "required": ["refresh_token"] },
+      { "required": ["api_key"] },
+      { "required": ["private_key"] },
+      { "required": ["embedding"] },
+      { "required": ["chunk_text"] }
+    ]
+  },
+  "$defs": {
+    "sha256_prefixed": {
+      "type": "string",
+      "pattern": "^sha256:[a-fA-F0-9]{64}$"
+    }
+  }
+}
