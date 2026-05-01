@@ -1,30 +1,26 @@
-# ADR-0004 — Use BigQuery as Audit Ledger
+# ADR-0004 — Use BigQuery as Analytical Audit View
 
 ## Status
 
-Accepted
+Accepted — revised by v1.3 reference architecture
 
 ## Context
 
-The architecture requires durable, queryable, append-oriented audit evidence.
+The architecture requires durable evidence, queryable audit views and operational reporting.
 
-Evidence events must support:
+These are different responsibilities:
 
-- auditor queries;
-- compliance exports;
-- evidence pack generation;
-- long-term retention policies;
-- analytical inspection;
-- anomaly detection;
-- chain verification.
+1. **Consistent State Store** — state transitions, idempotency, ChainHead and operation status.
+2. **Immutable Evidence Store** — sealed evidence packages under retention/object lock.
+3. **Analytical Audit Store** — queryable views, dashboards, reports and reconciliation.
 
-BigQuery is well-suited for analytical storage and large-scale audit queries. It is not the coordinator for ChainHead advancement.
+BigQuery is well-suited for analytical audit materialization and large-scale queries. It should not be treated as the root source of immutability, nor as the transaction coordinator for ChainHead advancement.
 
 ## Decision
 
-Use BigQuery as the Veritas Ledger for non-reversible evidence events.
+Use BigQuery as the analytical audit view for non-reversible evidence events.
 
-BigQuery stores:
+BigQuery stores queryable materialized metadata such as:
 
 - decision identifiers;
 - tenant/client identifiers;
@@ -33,11 +29,12 @@ BigQuery stores:
 - final hash;
 - signature metadata;
 - ChainHead position;
+- evidence object URI/hash;
 - runtime metadata;
 - timestamps;
-- ledger status.
+- ledger/materialization status.
 
-BigQuery must not store:
+BigQuery must not store by default:
 
 - raw prompts;
 - raw responses;
@@ -48,43 +45,57 @@ BigQuery must not store:
 - reconstructable embeddings;
 - unredacted personal identifiers unless explicitly justified by a separate data contract.
 
+## Explicit Non-Decision
+
+This ADR does **not** define BigQuery as the immutable evidence root.
+
+Root evidence should live in an immutable evidence store such as:
+
+- Cloud Storage Bucket Lock;
+- object lock equivalent;
+- dedicated WORM storage;
+- another retention-locked evidence repository.
+
+BigQuery may mirror, index or materialize evidence metadata for audit analytics. It must be reconcilable against the immutable evidence store and the consistent state store.
+
 ## Consequences
 
 ### Positive
 
 - Enables scalable audit queries.
-- Supports partitioning, clustering and retention policies.
-- Works well for evidence pack generation.
-- Keeps analytical ledger separate from transaction coordination.
+- Supports partitioning, clustering and reporting.
+- Works well for evidence pack search and dashboards.
+- Keeps analytical audit separate from transaction coordination and immutable retention.
 
 ### Negative
 
-- Append-only behavior is policy/IAM-driven, not magical immutability.
+- Requires reconciliation against sealed evidence packages.
 - Requires strict schema enforcement.
 - Requires monitoring for mutation attempts.
-- BigQuery outage requires outbox/reconciliation design.
+- BigQuery outage requires async materialization/replay design.
+- Teams must avoid calling BigQuery itself the WORM root.
 
 ## Controls Required
 
-- Application writer identity has insert-only permissions.
+- Application writer identity has append/materialization-only permissions.
 - Human admin access is restricted and audited.
-- Dataset/table deletion protection is enabled where available.
-- Retention policy is explicit.
 - Schema excludes raw payload fields.
+- Evidence object URI and hash are stored for reconciliation.
 - Chain verification jobs run periodically.
-- Ledger append failures emit alerts.
+- Analytics table is reconciled against immutable evidence and state store.
+- Materialization failures emit alerts.
 
 ## Degraded Mode
 
-If BigQuery is unavailable, degraded mode is acceptable only when:
+If BigQuery is unavailable, core operation may continue only when:
 
-- evidence has already been signed;
-- ChainHead has advanced;
-- evidence event is durably queued;
-- later reconciliation is guaranteed by operational process;
-- client receives explicit degraded status.
+- state transition has committed where required;
+- receipt has been signed;
+- sealed evidence package has been written or durably queued according to profile;
+- later analytical materialization is guaranteed by an operational process;
+- client or operator receives explicit degraded/materialization-pending status where relevant.
 
-Otherwise, the request must fail closed.
+If immutable evidence cannot be preserved in a high-assurance profile, the request must fail closed.
 
 ## Validation
 
@@ -92,6 +103,7 @@ This ADR is valid only if:
 
 - BigQuery schema validates against `evidence-event.schema.json`;
 - payload leakage tests block prohibited fields;
-- IAM prevents application update/delete;
+- BigQuery is reconciled against immutable evidence packages;
+- IAM prevents application update/delete beyond intended materialization behavior;
 - chain verification detects missing or altered events;
-- outbox replay is tested.
+- replay/materialization backfill is tested.
