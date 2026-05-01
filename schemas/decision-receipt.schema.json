@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundlab.com.br/schemas/veritas/decision-receipt.v1.schema.json",
+  "title": "Veritas Decision Receipt v1",
+  "description": "Client-facing receipt proving that a sensitive AI or decision operation was executed under a specific policy without retaining raw sensitive payloads.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision_id",
+    "tenant_id",
+    "route",
+    "model_id",
+    "policy_snapshot_hash",
+    "input_hash_sha256",
+    "output_hash_sha256",
+    "final_hash",
+    "signature",
+    "chain",
+    "ledger_status",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "veritas.decision_receipt.v1"
+    },
+    "decision_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9._:-]+$"
+    },
+    "client_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9._:-]+$"
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["dev", "staging", "prod", "audit-sandbox"]
+    },
+    "route": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^/[-a-zA-Z0-9_./:]+$"
+    },
+    "model_provider": {
+      "type": "string",
+      "enum": ["google_vertex_ai", "google_gemini", "openai", "anthropic", "aws_bedrock", "azure_openai", "custom"]
+    },
+    "model_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "model_version": {
+      "type": ["string", "null"],
+      "maxLength": 256
+    },
+    "policy_snapshot_hash": {
+      "$ref": "#/$defs/sha256_prefixed"
+    },
+    "input_hash_sha256": {
+      "$ref": "#/$defs/sha256_prefixed"
+    },
+    "output_hash_sha256": {
+      "$ref": "#/$defs/sha256_prefixed"
+    },
+    "final_hash": {
+      "$ref": "#/$defs/sha256_prefixed"
+    },
+    "canonicalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "version"],
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": ["RFC8785_JSON_CANONICALIZATION", "JCS", "CUSTOM"]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "kms_key_version", "signature_base64"],
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": ["ECDSA_P256_SHA256", "ECDSA_P384_SHA384", "RSA_PSS_2048_SHA256", "ED25519"]
+        },
+        "kms_key_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "public_key_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "signature_base64": {
+          "type": "string",
+          "contentEncoding": "base64",
+          "minLength": 16,
+          "maxLength": 4096
+        }
+      }
+    },
+    "chain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["client_id", "sequence_index", "previous_hash", "current_hash"],
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9._:-]+$"
+        },
+        "sequence_index": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "previous_hash": {
+          "anyOf": [
+            { "$ref": "#/$defs/sha256_prefixed" },
+            { "type": "null" }
+          ]
+        },
+        "current_hash": {
+          "$ref": "#/$defs/sha256_prefixed"
+        }
+      }
+    },
+    "ledger_status": {
+      "type": "string",
+      "enum": ["sealed", "degraded", "pending_reconciliation", "failed_closed"]
+    },
+    "failure": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["code", "mode"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "POLICY_UNAVAILABLE",
+            "POLICY_SNAPSHOT_MISSING",
+            "KMS_SIGNING_FAILED",
+            "CHAINHEAD_ADVANCE_FAILED",
+            "LEDGER_APPEND_DEGRADED",
+            "ZERO_PERSISTENCE_VIOLATION",
+            "MODEL_PROVIDER_UNAVAILABLE",
+            "PAYLOAD_CONTRACT_VIOLATION",
+            "AUTHORIZATION_DENIED",
+            "REPLAY_DETECTED"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["deny", "fail_closed", "degraded_with_outbox", "poison_pill", "controlled_error"]
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 512
+        }
+      }
+    },
+    "latency_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "sha256_prefixed": {
+      "type": "string",
+      "pattern": "^sha256:[a-fA-F0-9]{64}$"
+    }
+  }
+}
