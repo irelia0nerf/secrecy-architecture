@@ -167,7 +167,15 @@ def main() -> None:
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parent.parent
-    obj = _load_json(args.input)
+    try:
+        obj = _load_json(args.input)
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"ERROR: failed to load input file: {e}")
+        sys.exit(1)
+
+    if not isinstance(obj, (dict, list)):
+        print("ERROR: input must be a JSON object or array")
+        sys.exit(1)
 
     schema_path = args.schema or _detect_schema_path(obj, repo_root)
     if not schema_path:
