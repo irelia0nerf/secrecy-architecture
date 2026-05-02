@@ -110,6 +110,8 @@ def _verify_event_chain(events: list[dict], schema: dict) -> list[str]:
         return ["input: expected a JSON array of evidence events"]
 
     errors = []
+    if not all(isinstance(e, dict) for e in events):
+        return ["input: expected a JSON array of objects (evidence events)"]
     sorted_events = sorted(events, key=lambda e: e.get("sequence_index", 0))
 
     prev_current_hash = None
