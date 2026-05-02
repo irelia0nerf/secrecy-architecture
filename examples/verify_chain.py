@@ -96,7 +96,9 @@ def _verify_single_receipt(obj: dict, schema: dict) -> list[str]:
         idx = chain.get("sequence_index", 0)
         if idx == 1 and prev is not None:
             errors.append(f"chain: sequence_index=1 but previous_hash is not null: {prev!r}")
-        if idx > 1 and prev is not None and not SHA256_RE.match(str(prev)):
+        elif idx > 1 and prev is None:
+            errors.append(f"chain: sequence_index > 1 but previous_hash is null")
+        elif idx > 1 and not SHA256_RE.match(str(prev)):
             errors.append(f"chain: previous_hash has invalid format: {prev!r}")
         if not SHA256_RE.match(str(curr)):
             errors.append(f"chain: current_hash has invalid format: {curr!r}")
