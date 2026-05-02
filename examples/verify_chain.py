@@ -148,7 +148,7 @@ def _verify_event_chain(events: list[dict], schema: dict) -> list[str]:
 
 
 def _detect_schema_path(obj: object, repo_root: Path) -> str | None:
-    if isinstance(obj, list) and obj:
+    if isinstance(obj, list) and obj and isinstance(obj[0], dict):
         sv = obj[0].get("schema_version", "")
     elif isinstance(obj, dict):
         sv = obj.get("schema_version", "")
