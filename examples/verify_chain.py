@@ -135,8 +135,11 @@ def _verify_event_chain(events: list[dict], schema: dict) -> list[str]:
                     f"{label}: previous_hash {prev_hash!r} does not match "
                     f"prior event current_hash {prev_current_hash!r}"
                 )
-        elif i == 0 and seq == 1 and prev_hash is not None:
-            errors.append(f"{label}: first event (seq=1) should have previous_hash=null, got {prev_hash!r}")
+        elif i == 0:
+            if seq == 1 and prev_hash is not None:
+                errors.append(f"{label}: first event (seq=1) should have previous_hash=null, got {prev_hash!r}")
+            elif seq > 1 and prev_hash is None:
+                errors.append(f"{label}: sequence_index > 1 but previous_hash is null")
 
         prev_current_hash = curr_hash
         prev_seq = seq
