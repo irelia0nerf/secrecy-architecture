@@ -17,6 +17,7 @@ ADRs are binding engineering constraints. They are not narrative notes.
 | [ADR-0005](./0005-keep-firebase-out-of-hot-path.md) | Keep Firebase out of the hot path | Accepted |
 | [ADR-0006](./0006-use-immutable-evidence-store.md) | Use immutable evidence store for sealed packages | Accepted |
 | [ADR-0007](./0007-use-state-machine-for-side-effects.md) | Use state machine for irreversible side effects | Accepted |
+| [ADR-0008](./0008-use-retention-state-machine-for-erasure-and-legal-hold.md) | Use retention state machine for erasure and legal hold | Accepted |
 
 ---
 
